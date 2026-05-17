@@ -11,6 +11,66 @@
 
 ---
 
+## Production Implementation Status
+
+AgriFlow is currently deployed as a three-service production system on Render Free Tier:
+
+* **Frontend Web App:** Next.js dashboard for farmers and buyers, including authentication, crop listings, marketplace browsing, disease diagnosis, yield analytics, and AgriBot chat.
+* **Express Backend API:** Central API gateway for authentication, marketplace listings, orders, payments, Cloudinary uploads, historical yield analytics, chat responses, and communication with the ML service.
+* **FastAPI ML Service:** Dedicated Python inference service for crop disease detection and yield prediction so ML workloads stay separate from the Node.js application server.
+
+### Current Live Features
+
+* **Authentication & Sessions:** JWT-based login with persistent frontend session handling and role-aware dashboard routing.
+* **Farmer Listings:** Farmers can create listings with crop details, location, quantity, price, description, and crop images.
+* **My Listings:** Farmers can view and manage only their own listings using the authenticated `/api/listings/mine` endpoint.
+* **Marketplace:** Buyers can browse active listings from the live database through `/api/listings`.
+* **Buy Now Flow:** Buyers can create orders and launch Razorpay Checkout when payment credentials are configured.
+* **Disease Detection:** Farmers can upload leaf/crop images, which are processed by the backend and FastAPI ML service.
+* **Yield Analytics:** The dashboard predicts crop yield and renders historical regional trend charts using Recharts.
+* **AgriBot AI:** The chat UI connects to the backend chat endpoint and returns agronomy guidance, with backend fallback responses if the external AI provider is unavailable.
+
+---
+
+## Tech Stack Used
+
+| Layer | Technologies |
+| :--- | :--- |
+| **Frontend** | Next.js 16, React 19, TypeScript, Tailwind CSS 4, Axios, React Hook Form, Zod, React Query, Recharts, Framer Motion, Lucide React, React Hot Toast, Socket.IO Client |
+| **Backend** | Node.js, Express 5, TypeScript, PostgreSQL `pg`, JWT, Cookie Parser, CORS, Helmet, Morgan, Multer, Cloudinary SDK, Razorpay SDK, Socket.IO, Zod |
+| **ML Service** | Python, FastAPI, Uvicorn, PyTorch CPU, Torchvision, Scikit-Learn, Pandas, NumPy, Pillow, Requests, Pydantic |
+| **Database & Storage** | Neon Serverless PostgreSQL, Cloudinary image storage |
+| **Payments** | Razorpay Checkout and backend payment verification |
+| **Deployment** | Render Web Services for frontend, backend, and ML service |
+| **AI / ML** | CNN-based crop disease classification, yield prediction model, HuggingFace-backed AgriBot with backend fallback guidance |
+
+### Production API Surface
+
+| Feature | Main Endpoint |
+| :--- | :--- |
+| Health Check | `GET /api/health` |
+| Auth | `POST /api/auth/login`, `POST /api/auth/register`, `GET /api/auth/me` |
+| Marketplace Listings | `GET /api/listings`, `POST /api/listings`, `GET /api/listings/mine`, `DELETE /api/listings/:id` |
+| Orders & Payments | `POST /api/orders`, `POST /api/orders/verify-payment` |
+| Disease Diagnosis | `POST /api/diagnosis/analyze` |
+| Yield Prediction | `POST /api/yield/predict` |
+| Historical Yield Trends | `GET /api/yield/historical` |
+| AgriBot Chat | `POST /api/chat` |
+
+### Environment Integrations
+
+The production deployment uses environment variables for:
+
+* PostgreSQL connection string through `DATABASE_URL`.
+* JWT and cookie secrets for secure authentication.
+* Cloudinary credentials for image uploads.
+* Razorpay keys for payment checkout and verification.
+* HuggingFace API key for AI chat responses.
+* `ML_SERVICE_URL` for backend-to-FastAPI inference calls.
+* `NEXT_PUBLIC_API_URL` or equivalent frontend API base URL for deployed frontend requests.
+
+---
+
 # Overview
 
 AgriFlow is a cutting-edge, full-stack AgriTech ecosystem designed to empower farmers, buyers, and agricultural stakeholders through deep data-driven intelligence and friction-free commerce. By blending advanced computer vision, predictive regression models, robust marketplace mechanics, and real-time communication, AgriFlow turns complex agricultural data into actionable, high-yield business and farming decisions.
