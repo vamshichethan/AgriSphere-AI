@@ -29,18 +29,27 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   useEffect(() => {
     // Quick check from localStorage
     const savedUser = localStorage.getItem('user');
+    const savedToken = localStorage.getItem('token');
     if (savedUser) {
       setUser(JSON.parse(savedUser));
     }
+    if (savedToken) {
+      axios.defaults.headers.common.Authorization = `Bearer ${savedToken}`;
+    }
     
     // Verify session with backend
-    axios.get(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/auth/me`, { withCredentials: true })
+    axios.get(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/auth/me`, {
+      withCredentials: true,
+      headers: savedToken ? { Authorization: `Bearer ${savedToken}` } : undefined,
+    })
       .then(res => {
         setUser(res.data.user);
         localStorage.setItem('user', JSON.stringify(res.data.user));
       })
       .catch(() => {
         localStorage.removeItem('user');
+        localStorage.removeItem('token');
+        delete axios.defaults.headers.common.Authorization;
         toast.error("Session expired. Please log in.");
         router.push('/auth/login');
       })
@@ -51,6 +60,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     try {
       await axios.post(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/auth/logout`, {}, { withCredentials: true });
       localStorage.removeItem('user');
+      localStorage.removeItem('token');
+      delete axios.defaults.headers.common.Authorization;
       router.push('/auth/login');
     } catch (err) {
       toast.error("Failed to log out");

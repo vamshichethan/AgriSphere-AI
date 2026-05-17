@@ -36,6 +36,8 @@ export default function LoginPage() {
         toast.success(res.data.message);
         // Save user details locally for quick access before React Query hydrates
         localStorage.setItem('user', JSON.stringify(res.data.user));
+        localStorage.setItem('token', res.data.token);
+        axios.defaults.headers.common.Authorization = `Bearer ${res.data.token}`;
         router.push('/dashboard');
       }
     } catch (err: any) {

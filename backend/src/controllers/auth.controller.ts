@@ -1,4 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
+import type { CookieOptions } from 'express';
 import bcrypt from 'bcryptjs';
 import jwt, { SignOptions } from 'jsonwebtoken';
 import { v4 as uuidv4 } from 'uuid';
@@ -15,10 +16,10 @@ const generateToken = (userId: string, role: string, email: string) => {
   );
 };
 
-const cookieOptions = {
+const cookieOptions: CookieOptions = {
   httpOnly: true,
   secure: process.env.NODE_ENV === 'production',
-  sameSite: 'strict' as const,
+  sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
   maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
 };
 
@@ -99,7 +100,11 @@ export const login = async (req: Request, res: Response, next: NextFunction) => 
 };
 
 export const logout = (_req: Request, res: Response) => {
-  res.clearCookie('agriflow_token');
+  res.clearCookie('agriflow_token', {
+    httpOnly: cookieOptions.httpOnly,
+    secure: cookieOptions.secure,
+    sameSite: cookieOptions.sameSite,
+  });
   res.status(200).json({ success: true, message: 'Logged out successfully.' });
 };
 

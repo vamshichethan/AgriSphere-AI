@@ -38,10 +38,14 @@ export default function SignupPage() {
   const onSubmit = async (data: SignupFormValues) => {
     setIsLoading(true);
     try {
-      const res = await axios.post(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/auth/signup`, data);
+      const res = await axios.post(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/auth/signup`, data, {
+        withCredentials: true
+      });
       if (res.data.success) {
         toast.success(res.data.message);
         localStorage.setItem('user', JSON.stringify(res.data.user));
+        localStorage.setItem('token', res.data.token);
+        axios.defaults.headers.common.Authorization = `Bearer ${res.data.token}`;
         router.push('/dashboard');
       }
     } catch (err: any) {
