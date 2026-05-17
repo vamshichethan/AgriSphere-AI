@@ -1,0 +1,17 @@
+{
+  "name": "agriflow-backend",
+  "version": "1.0.0",
+  "description": "AgriFlow Express + TypeScript Backend API",
+  "main": "dist/index.js",
+  "scripts": {
+    "dev": "ts-node-dev --respawn --transpile-only src/index.ts",
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "db:migrate": "node scripts/migrate.js",
+    "db:seed": "node scripts/seed.js"
+  },
+  "keywords": ["agriflow", "express", "typescript"],
+  "author": "AgriFlow Team",
+  "license": "ISC",
+  "type": "commonjs"
+}
