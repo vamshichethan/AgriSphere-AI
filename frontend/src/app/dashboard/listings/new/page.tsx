@@ -7,11 +7,14 @@ import { Upload, IndianRupee, Scale, Loader2, ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
+import { api } from '@/lib/api';
 
 type ListingFormValues = {
   crop_name: string;
   quantity_quintals: number;
   price_per_quintal: number;
+  location_state: string;
+  location_district: string;
   description: string;
 };
 
@@ -33,12 +36,25 @@ export default function NewListingPage() {
 
   const onSubmit = async (data: ListingFormValues) => {
     setIsSubmitting(true);
-    // Simulate backend delay for demo
-    setTimeout(() => {
+    try {
+      const formData = new FormData();
+      formData.append('crop_name', data.crop_name);
+      formData.append('quantity_quintals', String(data.quantity_quintals));
+      formData.append('price_per_quintal', String(data.price_per_quintal));
+      formData.append('location_state', data.location_state);
+      formData.append('location_district', data.location_district);
+      formData.append('description', data.description || '');
+      if (selectedFile) formData.append('crop_image', selectedFile);
+
+      await api.post('/api/listings', formData);
       toast.success("Crop listed successfully!");
       router.push('/dashboard/listings');
+      router.refresh();
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || 'Failed to create listing.');
+    } finally {
       setIsSubmitting(false);
-    }, 1500);
+    }
   };
 
   return (
@@ -119,6 +135,30 @@ export default function NewListingPage() {
                 className="w-full bg-neutral-900/50 border border-neutral-800 rounded-xl py-3 px-4 focus:outline-none focus:ring-2 focus:ring-green-500/50 transition-all text-neutral-100"
                 placeholder="₹ 0.00"
               />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="space-y-1">
+              <label className="text-sm font-medium text-neutral-300">State</label>
+              <input
+                {...register('location_state', { required: 'State is required' })}
+                type="text"
+                className="w-full bg-neutral-900/50 border border-neutral-800 rounded-xl py-3 px-4 focus:outline-none focus:ring-2 focus:ring-green-500/50 transition-all text-neutral-100"
+                placeholder="e.g. Karnataka"
+              />
+              {errors.location_state && <p className="text-red-400 text-xs mt-1">{errors.location_state.message}</p>}
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-sm font-medium text-neutral-300">District</label>
+              <input
+                {...register('location_district', { required: 'District is required' })}
+                type="text"
+                className="w-full bg-neutral-900/50 border border-neutral-800 rounded-xl py-3 px-4 focus:outline-none focus:ring-2 focus:ring-green-500/50 transition-all text-neutral-100"
+                placeholder="e.g. Bengaluru Rural"
+              />
+              {errors.location_district && <p className="text-red-400 text-xs mt-1">{errors.location_district.message}</p>}
             </div>
           </div>
 

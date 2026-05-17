@@ -3,30 +3,93 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Search, MapPin, IndianRupee, ShoppingCart, Filter, Image as ImageIcon } from 'lucide-react';
-import axios from 'axios';
 import toast from 'react-hot-toast';
+import { api } from '@/lib/api';
+
+declare global {
+  interface Window {
+    Razorpay?: new (options: Record<string, unknown>) => { open: () => void };
+  }
+}
+
+const loadRazorpay = () => new Promise<boolean>((resolve) => {
+  if (window.Razorpay) return resolve(true);
+
+  const script = document.createElement('script');
+  script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+  script.onload = () => resolve(true);
+  script.onerror = () => resolve(false);
+  document.body.appendChild(script);
+});
 
 export default function MarketPage() {
   const [listings, setListings] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [search, setSearch] = useState('');
 
-  // Mock data or fetch real data
   useEffect(() => {
     setIsLoading(true);
-    // Simulate API fetch delay
-    setTimeout(() => {
-      setListings([
-        { id: '1', crop_name: 'Premium Wheat', quantity_quintals: 50, price_per_quintal: 2400, location_state: 'Punjab', location_district: 'Ludhiana', farmer_name: 'Harjit Singh', image_url: null },
-        { id: '2', crop_name: 'Basmati Rice', quantity_quintals: 120, price_per_quintal: 3800, location_state: 'Haryana', location_district: 'Karnal', farmer_name: 'Ramesh Kumar', image_url: null },
-        { id: '3', crop_name: 'Fresh Tomatoes', quantity_quintals: 15, price_per_quintal: 1200, location_state: 'Maharashtra', location_district: 'Nashik', farmer_name: 'Suresh Patil', image_url: null },
-        { id: '4', crop_name: 'Organic Potatoes', quantity_quintals: 80, price_per_quintal: 1500, location_state: 'Uttar Pradesh', location_district: 'Agra', farmer_name: 'Amit Yadav', image_url: null }
-      ]);
-      setIsLoading(false);
-    }, 800);
+    api.get('/api/listings')
+      .then((res) => setListings(res.data.listings || []))
+      .catch((err) => toast.error(err.response?.data?.message || 'Failed to load marketplace listings.'))
+      .finally(() => setIsLoading(false));
   }, []);
 
   const filteredListings = listings.filter(l => l.crop_name.toLowerCase().includes(search.toLowerCase()));
+
+  const handleBuyNow = async (item: any) => {
+    try {
+      const quantity = 1;
+      const res = await api.post('/api/orders', {
+        listing_id: item.id,
+        quantity_ordered: quantity,
+      });
+
+      if (!res.data.payment_required) {
+        toast.success('Order created successfully.');
+        return;
+      }
+
+      const isLoaded = await loadRazorpay();
+      if (!isLoaded || !window.Razorpay) {
+        toast.error('Payment checkout could not be loaded. Please try again.');
+        return;
+      }
+
+      const { order, razorpay_key } = res.data;
+      const checkout = new window.Razorpay({
+        key: razorpay_key,
+        amount: order.amount_paise,
+        currency: order.currency,
+        name: 'AgriFlow Marketplace',
+        description: `${quantity} quintal of ${order.crop_name}`,
+        order_id: order.razorpay_order_id,
+        handler: async (payment: any) => {
+          await api.post('/api/orders/verify-payment', {
+            order_id: order.id,
+            razorpay_order_id: payment.razorpay_order_id,
+            razorpay_payment_id: payment.razorpay_payment_id,
+            razorpay_signature: payment.razorpay_signature,
+          });
+          toast.success('Payment successful. Order confirmed.');
+          setListings((current) => current.map((listing) => (
+            listing.id === item.id
+              ? { ...listing, quantity_quintals: Number(listing.quantity_quintals) - quantity }
+              : listing
+          )).filter((listing) => Number(listing.quantity_quintals) > 0));
+        },
+        prefill: {
+          name: JSON.parse(localStorage.getItem('user') || '{}')?.name,
+          email: JSON.parse(localStorage.getItem('user') || '{}')?.email,
+        },
+        theme: { color: '#22c55e' },
+      });
+
+      checkout.open();
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || 'Could not start purchase.');
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -107,7 +170,7 @@ export default function MarketPage() {
                 </div>
 
                 <button 
-                  onClick={() => toast('Payment gateway integration pending Phase 8', { icon: '💳' })}
+                  onClick={() => handleBuyNow(item)}
                   className="w-full mt-4 bg-white/5 hover:bg-green-500 hover:text-neutral-950 border border-white/10 hover:border-green-500 text-neutral-300 py-2.5 rounded-xl text-sm font-semibold transition-all duration-300 flex items-center justify-center gap-2 group/btn"
                 >
                   <ShoppingCart className="w-4 h-4" />

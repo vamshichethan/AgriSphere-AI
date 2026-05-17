@@ -83,6 +83,22 @@ export const getListings = async (req: Request, res: Response, next: NextFunctio
   }
 };
 
+export const getMyListings = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const result = await query(
+      `SELECT *
+       FROM listings
+       WHERE farmer_id = $1
+       ORDER BY created_at DESC`,
+      [req.user!.userId]
+    );
+
+    res.status(200).json({ success: true, listings: result.rows });
+  } catch (err) {
+    next(err);
+  }
+};
+
 export const getListingById = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const result = await query(

@@ -3,8 +3,8 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Upload, AlertCircle, CheckCircle2, ShieldAlert, Leaf, Loader2 } from 'lucide-react';
-import axios from 'axios';
 import toast from 'react-hot-toast';
+import { api } from '@/lib/api';
 
 export default function DiagnosisPage() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -29,30 +29,11 @@ export default function DiagnosisPage() {
     formData.append('leaf_image', selectedFile);
 
     try {
-      // Intentionally mock if backend is down, or hit real API
-      const res = await axios.post(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/diagnosis/analyze`, formData, {
-        withCredentials: true,
-        headers: { 'Content-Type': 'multipart/form-data' }
-      });
+      const res = await api.post('/api/diagnosis/analyze', formData);
       setResult(res.data.diagnosis);
       toast.success("Analysis complete");
     } catch (err: any) {
       toast.error(err.response?.data?.message || "Failed to analyze image. Ensure backend and ML services are running.");
-      // Fallback mock for demo purposes if backend isn't up
-      setTimeout(() => {
-        setResult({
-          crop: "Tomato",
-          disease: "Tomato_Early_Blight",
-          confidence: 94.2,
-          treatment: {
-            symptoms: "Dark brown spots with concentric rings on lower leaves.",
-            organic_treatment: "Apply neem oil spray every 7 days. Compost tea spray.",
-            chemical_treatment: "Mancozeb 75% WP @ 2g/L.",
-            prevention_measures: "Crop rotation. Avoid overhead irrigation."
-          }
-        });
-        setIsAnalyzing(false);
-      }, 1500);
     } finally {
       setIsAnalyzing(false);
     }

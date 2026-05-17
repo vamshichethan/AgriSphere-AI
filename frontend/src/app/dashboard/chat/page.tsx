@@ -3,8 +3,8 @@
 import { useState, useRef, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Send, Bot, User, Loader2, Sparkles, RefreshCw } from 'lucide-react';
-import axios from 'axios';
 import toast from 'react-hot-toast';
+import { api } from '@/lib/api';
 
 type Message = { role: 'user' | 'assistant' | 'system', content: string };
 
@@ -34,21 +34,13 @@ export default function ChatPage() {
     setIsTyping(true);
 
     try {
-      const res = await axios.post(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/chat`, {
+      const res = await api.post('/api/chat', {
         messages: newMessages
-      }, { withCredentials: true });
+      });
       
       setMessages([...newMessages, { role: 'assistant', content: res.data.reply }]);
     } catch (err) {
       toast.error("Failed to connect to AgriBot.");
-      // Fallback for demo
-      setTimeout(() => {
-         setMessages([...newMessages, { 
-           role: 'assistant', 
-           content: "I'm currently running in offline demo mode. In a live environment, I would connect to the ML model to give you precise agricultural advice." 
-         }]);
-         setIsTyping(false);
-      }, 1500);
     } finally {
       setIsTyping(false);
     }

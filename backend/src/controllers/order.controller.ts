@@ -11,6 +11,8 @@ const razorpay = new Razorpay({
   key_secret: process.env.RAZORPAY_KEY_SECRET as string,
 });
 
+const canUseRazorpay = Boolean(process.env.RAZORPAY_KEY_ID && process.env.RAZORPAY_KEY_SECRET);
+
 export const createOrder = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { listing_id, quantity_ordered } = req.body;
@@ -32,24 +34,33 @@ export const createOrder = async (req: Request, res: Response, next: NextFunctio
     const amountInPaise = Math.round(totalAmount * 100);
     const orderId = uuidv4();
 
-    // Create Razorpay order
-    const razorpayOrder = await razorpay.orders.create({
-      amount: amountInPaise,
-      currency: 'INR',
-      receipt: orderId,
-    });
+    const razorpayOrder = canUseRazorpay
+      ? await razorpay.orders.create({
+          amount: amountInPaise,
+          currency: 'INR',
+          receipt: orderId,
+        })
+      : null;
 
     // Store order in DB
     await query(
       `INSERT INTO orders (id, buyer_id, listing_id, quantity_ordered, total_amount, razorpay_order_id)
        VALUES ($1, $2, $3, $4, $5, $6)`,
-      [orderId, req.user!.userId, listing_id, quantity_ordered, totalAmount, razorpayOrder.id]
+      [orderId, req.user!.userId, listing_id, quantity_ordered, totalAmount, razorpayOrder?.id || null]
     );
 
     res.status(201).json({
       success: true,
-      order: { id: orderId, total_amount: totalAmount, razorpay_order_id: razorpayOrder.id },
+      order: {
+        id: orderId,
+        total_amount: totalAmount,
+        amount_paise: amountInPaise,
+        currency: 'INR',
+        crop_name: listing.crop_name,
+        razorpay_order_id: razorpayOrder?.id || null,
+      },
       razorpay_key: process.env.RAZORPAY_KEY_ID,
+      payment_required: Boolean(razorpayOrder),
     });
   } catch (err) {
     next(err);

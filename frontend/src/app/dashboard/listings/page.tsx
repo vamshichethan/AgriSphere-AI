@@ -4,21 +4,29 @@ import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Plus, IndianRupee, Sprout, Edit, Trash2 } from 'lucide-react';
 import Link from 'next/link';
+import toast from 'react-hot-toast';
+import { api } from '@/lib/api';
 
 export default function MyListingsPage() {
   const [listings, setListings] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Mock user listings
-    setTimeout(() => {
-      setListings([
-        { id: '1', crop_name: 'Premium Wheat', quantity_quintals: 50, price_per_quintal: 2400, status: 'active', created_at: '2026-05-15' },
-        { id: '2', crop_name: 'Organic Tomatoes', quantity_quintals: 15, price_per_quintal: 1200, status: 'active', created_at: '2026-05-16' },
-      ]);
-      setIsLoading(false);
-    }, 600);
+    api.get('/api/listings/mine')
+      .then((res) => setListings(res.data.listings || []))
+      .catch((err) => toast.error(err.response?.data?.message || 'Failed to load your listings.'))
+      .finally(() => setIsLoading(false));
   }, []);
+
+  const handleDelete = async (id: string) => {
+    try {
+      await api.delete(`/api/listings/${id}`);
+      setListings((current) => current.filter((item) => item.id !== id));
+      toast.success('Listing deleted.');
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || 'Failed to delete listing.');
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -74,10 +82,14 @@ export default function MyListingsPage() {
                   </p>
                 </div>
                 <div className="flex gap-2 ml-auto md:ml-4">
-                  <button className="p-2 text-neutral-400 hover:text-blue-400 hover:bg-blue-400/10 rounded-lg transition-colors">
+                  <button className="p-2 text-neutral-400 hover:text-blue-400 hover:bg-blue-400/10 rounded-lg transition-colors" title="Edit listing">
                     <Edit className="w-5 h-5" />
                   </button>
-                  <button className="p-2 text-neutral-400 hover:text-red-400 hover:bg-red-400/10 rounded-lg transition-colors">
+                  <button
+                    onClick={() => handleDelete(item.id)}
+                    className="p-2 text-neutral-400 hover:text-red-400 hover:bg-red-400/10 rounded-lg transition-colors"
+                    title="Delete listing"
+                  >
                     <Trash2 className="w-5 h-5" />
                   </button>
                 </div>

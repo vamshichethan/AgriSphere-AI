@@ -1,11 +1,12 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { motion } from 'framer-motion';
 import { TrendingUp, MapPin, Target, Calendar, Calculator, Loader2 } from 'lucide-react';
-import axios from 'axios';
+import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 import toast from 'react-hot-toast';
+import { api } from '@/lib/api';
 
 type YieldFormValues = {
   state: string;
@@ -17,7 +18,9 @@ type YieldFormValues = {
 
 export default function AnalyticsPage() {
   const [isPredicting, setIsPredicting] = useState(false);
+  const [isLoadingHistory, setIsLoadingHistory] = useState(true);
   const [prediction, setPrediction] = useState<any>(null);
+  const [history, setHistory] = useState<any[]>([]);
 
   const { register, handleSubmit } = useForm<YieldFormValues>({
     defaultValues: {
@@ -29,24 +32,35 @@ export default function AnalyticsPage() {
     }
   });
 
+  useEffect(() => {
+    api.get('/api/yield/historical?state=Maharashtra&crop=Wheat&season=Rabi&from_year=2015')
+      .then((res) => {
+        const rows = (res.data.data || []).map((row: any) => ({
+          year: row.crop_year,
+          yield: Number(row.yield_quintals_per_hectare || 0),
+        }));
+        const byYear = rows.reduce((acc: Record<string, { year: number; total: number; count: number }>, row: any) => {
+          if (!acc[row.year]) acc[row.year] = { year: row.year, total: 0, count: 0 };
+          acc[row.year].total += row.yield;
+          acc[row.year].count += 1;
+          return acc;
+        }, {});
+        setHistory((Object.values(byYear) as Array<{ year: number; total: number; count: number }>)
+          .map((row) => ({ year: row.year, yield: Number((row.total / row.count).toFixed(2)) }))
+          .sort((a, b) => a.year - b.year));
+      })
+      .catch(() => toast.error('Failed to load historical yield trends.'))
+      .finally(() => setIsLoadingHistory(false));
+  }, []);
+
   const onSubmit = async (data: YieldFormValues) => {
     setIsPredicting(true);
     try {
-      const res = await axios.post(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/yield/predict`, data, {
-        withCredentials: true
-      });
+      const res = await api.post('/api/yield/predict', data);
       setPrediction(res.data.prediction);
       toast.success("Yield prediction calculated");
-    } catch (err) {
-      // Mock for demo if backend is offline
-      setTimeout(() => {
-        setPrediction({
-          yield_quintals_per_hectare: 3.25,
-          estimated_production_quintals: (3.25 * data.area_hectares).toFixed(2),
-          confidence: "high"
-        });
-        setIsPredicting(false);
-      }, 1000);
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || 'Failed to calculate yield prediction.');
     } finally {
       setIsPredicting(false);
     }
@@ -142,11 +156,29 @@ export default function AnalyticsPage() {
             </div>
           )}
 
-          {/* Placeholder for Historical Chart */}
           <div className="glass-panel p-6 rounded-2xl border border-white/5 h-[300px] flex flex-col">
             <h3 className="font-semibold mb-4">Historical Regional Trends</h3>
-            <div className="flex-1 border-t border-dashed border-neutral-800 flex items-center justify-center text-neutral-600 text-sm">
-               Chart UI (Recharts) renders here fetching from /api/yield/historical
+            <div className="flex-1 border-t border-neutral-800 pt-4">
+              {isLoadingHistory ? (
+                <div className="h-full flex items-center justify-center text-neutral-500 text-sm">Loading trends...</div>
+              ) : history.length > 0 ? (
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={history} margin={{ top: 8, right: 16, left: -12, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#262626" />
+                    <XAxis dataKey="year" stroke="#737373" fontSize={12} />
+                    <YAxis stroke="#737373" fontSize={12} />
+                    <Tooltip
+                      contentStyle={{ background: '#171717', border: '1px solid #404040', borderRadius: 8 }}
+                      labelStyle={{ color: '#f5f5f5' }}
+                    />
+                    <Line type="monotone" dataKey="yield" name="Yield / Ha" stroke="#10b981" strokeWidth={2} dot={{ r: 3 }} />
+                  </LineChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="h-full flex items-center justify-center text-neutral-500 text-sm">
+                  No historical records available yet.
+                </div>
+              )}
             </div>
           </div>
         </div>
