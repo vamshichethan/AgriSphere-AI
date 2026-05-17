@@ -3,6 +3,14 @@
 
 ---
 
+### 🌐 Live URLs
+
+* **Frontend:** [https://agrisphere-frontend.onrender.com](https://agrisphere-frontend.onrender.com)
+* **Backend:** [https://agrisphere-backend-yu9e.onrender.com/api/health](https://agrisphere-backend-yu9e.onrender.com/api/health)
+* **ML Service:** [https://agrisphere-ml-service.onrender.com/health](https://agrisphere-ml-service.onrender.com/health)
+
+---
+
 # Overview
 
 AgriFlow is a cutting-edge, full-stack AgriTech ecosystem designed to empower farmers, buyers, and agricultural stakeholders through deep data-driven intelligence and friction-free commerce. By blending advanced computer vision, predictive regression models, robust marketplace mechanics, and real-time communication, AgriFlow turns complex agricultural data into actionable, high-yield business and farming decisions.
