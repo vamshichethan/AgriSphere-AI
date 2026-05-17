@@ -2,9 +2,9 @@ fastapi
 uvicorn[standard]
 python-multipart
 Pillow
+--extra-index-url https://download.pytorch.org/whl/cpu
 torch
 torchvision
-xgboost
 scikit-learn
 pandas
 numpy
